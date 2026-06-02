@@ -1,0 +1,23 @@
+## Visual Studio Build Outputs
+[Bb]in/
+[Oo]bj/
+Generated\ Files/
+
+## Visual Studio cache and settings
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+## User-specific files
+*.rsuser
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+## OS Generated Files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
