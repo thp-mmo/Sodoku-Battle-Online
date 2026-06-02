@@ -1,28 +1,38 @@
 ```text
-SudokuBattleOnline/
+SudokuBattleOnline
 │
-├── Client/
-│   ├── Forms/
-│   ├── Network/
-│   ├── Game/
-│   ├── AI/
-│   ├── Services/
-│   └── Assets/
+├── src
+│   │
+│   ├── SudokuBattle.Client
+│   │   ├── Forms
+│   │   ├── Controls
+│   │   ├── Services
+│   │   ├── Network
+│   │   ├── Models
+│   │   └── Assets
+│   │
+│   ├── SudokuBattle.Server
+│   │   ├── Network
+│   │   ├── Matchmaking
+│   │   ├── RoomManager
+│   │   ├── GameManager
+│   │   ├── Services
+│   │   ├── Database
+│   │   └── Models
+│   │
+│   ├── SudokuBattle.Shared
+│   │   ├── Models
+│   │   ├── Packets
+│   │   ├── Enums
+│   │   └── Constants
+│   │
+│   └── SudokuBattle.AI
+│       ├── EasyBot
+│       ├── MediumBot
+│       └── HardBot
 │
-├── Server/
-│   ├── Network/
-│   ├── Managers/
-│   ├── Matchmaking/
-│   ├── Database/
-│   └── Services/
+├── docs
 │
-├── Shared/
-│   ├── Models/
-│   ├── Packets/
-│   ├── Enums/
-│   └── Utils/
+├── database
 │
-├── DatabaseScripts/
-│
-└── Documents/
 └── README.md
