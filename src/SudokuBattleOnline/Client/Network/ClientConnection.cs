@@ -1,4 +1,4 @@
-using System;
+x1 using System;
 using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
@@ -9,6 +9,7 @@ namespace Client.Network
 {
     /// <summary>
     /// quản lý kết nối tcp client
+    /// cái này để test commit - tên - email
     /// </summary>
     public class ClientConnection
     {
