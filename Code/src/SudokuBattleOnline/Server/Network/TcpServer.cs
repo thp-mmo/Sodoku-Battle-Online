@@ -1,23 +1,73 @@
-
-using SudokuBattleOnline.Shared.Packets;
 using System;
-using System.Collections.Generic;
-using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
-using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace SudokuBattle.Server.Network
 {
+    /// <summary>
+    /// Máy chủ TCP Socket chính của hệ thống Sudoku Battle Online.
+    /// 
+    /// Kiến trúc xử lý gói tin:
+    ///   Client gửi JSON ──► TcpServer (lắng nghe)
+    ///                            │
+    ///                            ▼
+    ///                       ClientSession (đọc theo dòng, chống dính gói)
+    ///                            │
+    ///                            ▼
+    ///                       PacketRouter (phân tích PacketType, định tuyến)
+    ///                            │
+    ///                            ▼
+    ///                       PacketHandler (xử lý logic nghiệp vụ)
+    ///                            │
+    ///                            ▼
+    ///                       ClientSession.SendPacketAsync() (phản hồi về Client)
+    /// </summary>
     public class TcpServer
     {
-        private TcpListener _listener;
-        private readonly int _port = 8888;
+        private TcpListener? _listener;
         private bool _isRunning;
-        private readonly List<TcpClient> _connectedClients = new List<TcpClient>();
+        private readonly CancellationTokenSource _cts = new();
 
+        // ─── Các module quản lý ───
+        private readonly SessionManager _sessionManager;
+        private readonly PacketRouter _packetRouter;
+        private readonly PacketHandler _packetHandler;
+
+        // ─── Cấu hình ───
+        private readonly int _port;
+
+        /// <summary>
+        /// Khởi tạo TcpServer với cổng chỉ định (mặc định 8888).
+        /// Tự động khởi tạo toàn bộ hệ thống quản lý phiên, định tuyến và xử lý gói tin.
+        /// </summary>
+        public TcpServer(int port = 8888)
+        {
+            _port = port;
+
+            // Khởi tạo các module theo đúng thứ tự phụ thuộc
+            _sessionManager = new SessionManager();
+            _packetHandler = new PacketHandler(_sessionManager);
+            _packetRouter = new PacketRouter(_packetHandler);
+        }
+
+        // ─── Điểm truy cập các module (cho các service bên ngoài) ───
+
+        /// <summary>
+        /// Truy cập bộ quản lý phiên kết nối.
+        /// </summary>
+        public SessionManager Sessions => _sessionManager;
+
+        // ═══════════════════════════════════════════════
+        //  KHỞI ĐỘNG SERVER
+        // ═══════════════════════════════════════════════
+
+        /// <summary>
+        /// Khởi động TCP Server, bắt đầu lắng nghe kết nối tại cổng được chỉ định.
+        /// Phương thức này sẽ chạy liên tục (blocking) cho đến khi Stop() được gọi.
+        /// </summary>
         public async Task StartAsync()
         {
             try
@@ -26,78 +76,109 @@ namespace SudokuBattle.Server.Network
                 _listener.Start();
                 _isRunning = true;
 
-                Console.WriteLine($"[SERVER] Sudoku TCP Server đã mở thành công tại cổng {_port}...");
-                Console.WriteLine("[SERVER] Đang sẵn sàng đón nhận các client kết nối vào...\n---");
+                Console.WriteLine("╔══════════════════════════════════════════════════╗");
+                Console.WriteLine("║         SUDOKU BATTLE ONLINE - TCP SERVER        ║");
+                Console.WriteLine("╠══════════════════════════════════════════════════╣");
+                Console.WriteLine($"║  Cổng (Port)  : {_port,-33}║");
+                Console.WriteLine($"║  Địa chỉ      : 0.0.0.0 (tất cả giao diện)    ║");
+                Console.WriteLine($"║  Thời gian    : {DateTime.Now:yyyy-MM-dd HH:mm:ss,-33}║");
+                Console.WriteLine("╠══════════════════════════════════════════════════╣");
+                Console.WriteLine("║  Trạng thái   : ✓ SẴN SÀNG NHẬN KẾT NỐI       ║");
+                Console.WriteLine("╚══════════════════════════════════════════════════╝");
+                Console.WriteLine();
 
+                // Vòng lặp chính: lắng nghe kết nối mới
                 while (_isRunning)
                 {
-                    TcpClient client = await _listener.AcceptTcpClientAsync();
-
-                    lock (_connectedClients)
+                    try
                     {
-                        _connectedClients.Add(client);
+                        TcpClient tcpClient = await _listener.AcceptTcpClientAsync(_cts.Token);
+                        _ = Task.Run(() => HandleNewClientAsync(tcpClient));
                     }
-                    Console.WriteLine($"[KẾT NỐI] Có người chơi mới tham gia! Tổng số trực tuyến: {_connectedClients.Count}");
-
-                    _ = Task.Run(() => HandleClientAsync(client));
+                    catch (OperationCanceledException)
+                    {
+                        // Server đang tắt, thoát vòng lặp bình thường
+                        break;
+                    }
                 }
+            }
+            catch (SocketException ex)
+            {
+                Console.WriteLine($"[LỖI SOCKET] Không thể mở cổng {_port}: {ex.Message}");
+                Console.WriteLine("[GỢI Ý] Kiểm tra xem cổng đã bị chiếm bởi tiến trình khác chưa.");
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"[LỖI CRITICAL] Hệ thống Server gặp sự cố: {ex.Message}");
             }
-        }
-
-        private async Task HandleClientAsync(TcpClient client)
-        {
-            using (NetworkStream stream = client.GetStream())
-            using (StreamReader reader = new StreamReader(stream, Encoding.UTF8))
+            finally
             {
-                try
-                {
-                    string jsonLine;
-                    while ((jsonLine = await reader.ReadLineAsync()) != null)
-                    {
-                        if (string.IsNullOrWhiteSpace(jsonLine)) continue;
-
-                        Console.WriteLine($"[SERVER NHẬN JSON]: {jsonLine}");
-
-                        var basePacket = JsonSerializer.Deserialize<BasePacket>(jsonLine);
-
-                        switch (basePacket?.PacketType)
-                        {
-                            case "LOGIN":
-                                var loginData = JsonSerializer.Deserialize<LoginPacket>(jsonLine);
-                                Console.WriteLine($"[LOGIC] Người chơi '{loginData.Username}' yêu cầu Đăng Nhập!");
-                                break;
-
-                            default:
-                                Console.WriteLine("[CẢNH BÁO] Gói tin không xác định.");
-                                break;
-                        }
-                    }
-                }
-                catch (Exception)
-                {
-                    // Xử lý ngắt kết nối
-                }
-                finally
-                {
-                    lock (_connectedClients)
-                    {
-                        _connectedClients.Remove(client);
-                    }
-                    client.Close();
-                    Console.WriteLine($"[NGẮT KẾT NỐI] Một client đã rời đi. Còn lại: {_connectedClients.Count}");
-                }
+                Stop();
             }
         }
 
+        // ═══════════════════════════════════════════════
+        //  XỬ LÝ CLIENT MỚI KẾT NỐI
+        // ═══════════════════════════════════════════════
+
+        /// <summary>
+        /// Xử lý khi có một TcpClient mới kết nối tới Server.
+        /// 1. Tạo ClientSession bọc TcpClient.
+        /// 2. Đăng ký vào SessionManager.
+        /// 3. Gắn sự kiện nhận dữ liệu -> PacketRouter.
+        /// 4. Gắn sự kiện ngắt kết nối -> SessionManager dọn dẹp.
+        /// 5. Bắt đầu vòng lặp nhận dữ liệu.
+        /// </summary>
+        private async Task HandleNewClientAsync(TcpClient tcpClient)
+        {
+            // 1. Tạo phiên kết nối mới
+            ClientSession session = new ClientSession(tcpClient);
+
+            // 2. Đăng ký phiên vào hệ thống quản lý
+            _sessionManager.AddSession(session);
+
+            // 3. Khi nhận dữ liệu JSON -> chuyển cho PacketRouter xử lý
+            session.OnDataReceived += (sender, jsonLine) =>
+            {
+                _packetRouter.Route(sender, jsonLine);
+            };
+
+            // 4. Khi client ngắt kết nối -> gỡ khỏi SessionManager
+            session.OnDisconnected += (sender) =>
+            {
+                _sessionManager.RemoveSession(sender);
+            };
+
+            // 5. Bắt đầu lắng nghe dữ liệu (chạy cho đến khi client ngắt)
+            await session.StartReceivingAsync();
+        }
+
+        // ═══════════════════════════════════════════════
+        //  DỪNG SERVER
+        // ═══════════════════════════════════════════════
+
+        /// <summary>
+        /// Dừng TCP Server, ngắt tất cả kết nối và giải phóng tài nguyên.
+        /// </summary>
         public void Stop()
         {
+            if (!_isRunning) return;
+
             _isRunning = false;
+
+            // Hủy vòng lặp AcceptTcpClientAsync
+            _cts.Cancel();
+
+            // Ngắt kết nối tất cả client
+            _sessionManager.DisconnectAll();
+
+            // Dừng lắng nghe cổng
             _listener?.Stop();
-            Console.WriteLine("[SERVER] Đã dừng lắng nghe hệ thống.");
+
+            Console.WriteLine();
+            Console.WriteLine("╔══════════════════════════════════════════════════╗");
+            Console.WriteLine("║  Server đã DỪNG hoạt động.                      ║");
+            Console.WriteLine("╚══════════════════════════════════════════════════╝");
         }
     }
 }
