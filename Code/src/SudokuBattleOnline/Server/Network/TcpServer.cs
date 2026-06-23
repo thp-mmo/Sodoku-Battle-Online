@@ -35,6 +35,8 @@ namespace SudokuBattle.Server.Network
         private readonly SessionManager _sessionManager;
         private readonly PacketRouter _packetRouter;
         private readonly PacketHandler _packetHandler;
+        private readonly SudokuBattle.Server.Matchmaking.MatchmakingQueue _matchmakingQueue;
+        private readonly SudokuBattle.Server.Matchmaking.MatchmakingManager _matchmakingManager;
 
         // ─── Cấu hình ───
         private readonly int _port;
@@ -49,7 +51,10 @@ namespace SudokuBattle.Server.Network
 
             // Khởi tạo các module theo đúng thứ tự phụ thuộc
             _sessionManager = new SessionManager();
-            _packetHandler = new PacketHandler(_sessionManager);
+            _matchmakingQueue = new SudokuBattle.Server.Matchmaking.MatchmakingQueue();
+            _matchmakingManager = new SudokuBattle.Server.Matchmaking.MatchmakingManager(_matchmakingQueue);
+            
+            _packetHandler = new PacketHandler(_sessionManager, _matchmakingQueue);
             _packetRouter = new PacketRouter(_packetHandler);
         }
 
@@ -75,6 +80,8 @@ namespace SudokuBattle.Server.Network
                 _listener = new TcpListener(IPAddress.Any, _port);
                 _listener.Start();
                 _isRunning = true;
+                
+                _matchmakingManager.Start();
 
                 Console.WriteLine("╔══════════════════════════════════════════════════╗");
                 Console.WriteLine("║         SUDOKU BATTLE ONLINE - TCP SERVER        ║");
@@ -143,10 +150,11 @@ namespace SudokuBattle.Server.Network
                 _packetRouter.Route(sender, jsonLine);
             };
 
-            // 4. Khi client ngắt kết nối -> gỡ khỏi SessionManager
+            // 4. Khi client ngắt kết nối -> gỡ khỏi SessionManager và hàng đợi Matchmaking
             session.OnDisconnected += (sender) =>
             {
                 _sessionManager.RemoveSession(sender);
+                _matchmakingQueue.Remove(sender);
             };
 
             // 5. Bắt đầu lắng nghe dữ liệu (chạy cho đến khi client ngắt)

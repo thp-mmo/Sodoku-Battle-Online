@@ -7,6 +7,7 @@ using Server.Models;
 using Server.Services;
 using Shared.Enums;
 using SudokuBattleOnline.Shared.Packets;
+using SudokuBattle.Server.Matchmaking;
 
 namespace SudokuBattle.Server.Network
 {
@@ -17,15 +18,17 @@ namespace SudokuBattle.Server.Network
     public class PacketHandler
     {
         private readonly SessionManager _sessionManager;
+        private readonly MatchmakingQueue _matchmakingQueue;
         private readonly DatabaseContext _databaseContext;
         private readonly AuthService _authService;
         private readonly UserRepository _userRepository;
         private readonly MatchRepository _matchRepository;
         private readonly RankingRepository _rankingRepository;
 
-        public PacketHandler(SessionManager sessionManager)
+        public PacketHandler(SessionManager sessionManager, MatchmakingQueue matchmakingQueue)
         {
             _sessionManager = sessionManager;
+            _matchmakingQueue = matchmakingQueue;
             _databaseContext = new DatabaseContext("database/sudoku.db");
             _databaseContext.Initialize();
 
@@ -233,6 +236,8 @@ namespace SudokuBattle.Server.Network
             if (!await RequireAuthAsync(session)) return;
 
             Console.WriteLine($"[MATCH] {session} yêu cầu tìm trận.");
+            
+            _matchmakingQueue.Enqueue(session);
 
             await session.SendPacketAsync(new FindMatchPacket
             {
