@@ -20,80 +20,93 @@ namespace SudokuBattleOnline.Forms
 
         private void CreateLayout()
         {
-            // Panel
+            // Panel Left (Menu)
             menuPanel = new Panel();
             menuPanel.Dock = DockStyle.Left;
-            menuPanel.Width = 400;
-            menuPanel.BackColor = Color.WhiteSmoke;
+            menuPanel.Width = 280;
+            menuPanel.BackColor = Color.FromArgb(41, 53, 65); // Dark blue-gray
+
+            // Panel Right (Content)
             contentPanel = new Panel();
             contentPanel.Dock = DockStyle.Fill;
-            contentPanel.BackColor = Color.Blue;
-
-            //Single Mode
-            Button btnSinglePlayer = new Button();
-            btnSinglePlayer.Text = "Single-Player Mode";
-            btnSinglePlayer.Location = new Point(150, 80);
-            btnSinglePlayer.Size = new Size(180, 40);
-            btnSinglePlayer.Click += (s, e) =>
+            contentPanel.BackColor = Color.FromArgb(236, 240, 241); // Soft light gray
+            
+            try
             {
-                ShowFormInPanel(new SinglePlayerForm());
-            };
+                // Try to load background image from Resources
+                string bgPath = System.IO.Path.GetFullPath(System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"..\..\..\Resources\bg.png"));
+                if (System.IO.File.Exists(bgPath))
+                {
+                    contentPanel.BackgroundImage = Image.FromFile(bgPath);
+                    contentPanel.BackgroundImageLayout = ImageLayout.Stretch;
+                }
+            }
+            catch { /* Ignore if not found */ }
+
+            // Game Title
+            Label lblTitle = new Label();
+            lblTitle.Text = "SUDOKU BATTLE";
+            lblTitle.Font = new Font("Segoe UI Black", 20F, FontStyle.Bold, GraphicsUnit.Point);
+            lblTitle.ForeColor = Color.White;
+            lblTitle.TextAlign = ContentAlignment.MiddleCenter;
+            lblTitle.Dock = DockStyle.Top;
+            lblTitle.Height = 100;
+            menuPanel.Controls.Add(lblTitle);
+
+            // Single Mode
+            Button btnSinglePlayer = new Button { Text = "Single-Player" };
+            StyleMenuButton(btnSinglePlayer, 100);
+            btnSinglePlayer.Click += (s, e) => { ShowFormInPanel(new SinglePlayerForm()); };
+
             // Online Mode
-            Button btnOnline = new Button();
-            btnOnline.Text = "Online Mode";
-            btnOnline.Location = new Point(150, 140);
-            btnOnline.Size = new Size(180, 40);
-            btnOnline.Click += (s, e) =>
-            {
-                ShowFormInPanel(new MultiplayerGameForm());
-            };
+            Button btnOnline = new Button { Text = "Online Mode" };
+            StyleMenuButton(btnOnline, 160);
+            btnOnline.Click += (s, e) => { ShowFormInPanel(new MultiplayerGameForm()); };
+
             // Your Profile
-            Button btnProfile = new Button();
-            btnProfile.Text = "Your Profile";
-            btnProfile.Location = new Point(150, 200);
-            btnProfile.Size = new Size(180, 40);
+            Button btnProfile = new Button { Text = "Your Profile" };
+            StyleMenuButton(btnProfile, 220);
+            btnProfile.Click += (s, e) => { ShowFormInPanel(new ProfileForm()); };
 
-            btnProfile.Click += (s, e) =>
-            {
-                ShowFormInPanel(new ProfileForm());
-            };
             // Ranking
-            Button btnRanking = new Button();
-            btnRanking.Text = "Ranking";
-            btnRanking.Location = new Point(150, 260);
-            btnRanking.Size = new Size(180, 40);
+            Button btnRanking = new Button { Text = "Ranking" };
+            StyleMenuButton(btnRanking, 280);
+            btnRanking.Click += (s, e) => { ShowFormInPanel(new RankingForm()); };
 
-            btnRanking.Click += (s, e) =>
-            {
-                ShowFormInPanel(new RankingForm());
-            };
             // Match History
-            Button btnMatchHistory = new Button();
-            btnMatchHistory.Text = "Match History";
-            btnMatchHistory.Location = new Point(150, 320);
-            btnMatchHistory.Size = new Size(180, 40);
-            btnMatchHistory.Click += (s, e) =>
-            {
-                ShowFormInPanel(new MatchHistoryForm());
-            };
-            // Best Score
-            Button btnBestScore = new Button();
-            btnBestScore.Text = "Best Score";
-            btnBestScore.Location = new Point(150, 380);
-            btnBestScore.Size = new Size(180, 40);
-            btnBestScore.Click += (s, e) =>
-            {
-                ShowFormInPanel(new BestScoreForm());
-            };
+            Button btnMatchHistory = new Button { Text = "Match History" };
+            StyleMenuButton(btnMatchHistory, 340);
+            btnMatchHistory.Click += (s, e) => { ShowFormInPanel(new MatchHistoryForm()); };
 
-            menuPanel.Controls.Add(btnProfile);
-            menuPanel.Controls.Add(btnRanking);
+            // Best Score
+            Button btnBestScore = new Button { Text = "Best Score" };
+            StyleMenuButton(btnBestScore, 400);
+            btnBestScore.Click += (s, e) => { ShowFormInPanel(new BestScoreForm()); };
+
+            menuPanel.Controls.Add(btnBestScore);
             menuPanel.Controls.Add(btnMatchHistory);
+            menuPanel.Controls.Add(btnRanking);
+            menuPanel.Controls.Add(btnProfile);
             menuPanel.Controls.Add(btnOnline);
             menuPanel.Controls.Add(btnSinglePlayer);
-            menuPanel.Controls.Add(btnBestScore);
+            
             Controls.Add(contentPanel);
             Controls.Add(menuPanel);
+        }
+
+        private void StyleMenuButton(Button btn, int yPos)
+        {
+            btn.FlatStyle = FlatStyle.Flat;
+            btn.FlatAppearance.BorderSize = 0;
+            btn.FlatAppearance.MouseOverBackColor = Color.FromArgb(52, 152, 219); // Blue on hover
+            btn.FlatAppearance.MouseDownBackColor = Color.FromArgb(41, 128, 185); // Darker blue on click
+            btn.BackColor = Color.FromArgb(41, 53, 65); // Transparent/Match panel
+            btn.ForeColor = Color.White;
+            btn.Font = new Font("Segoe UI", 12F, FontStyle.Bold, GraphicsUnit.Point);
+            btn.Cursor = Cursors.Hand;
+            btn.Location = new Point(0, yPos);
+            btn.Size = new Size(280, 60);
+            btn.TextAlign = ContentAlignment.MiddleCenter;
         }
         private void ShowFormInPanel(Form childForm)
         {
