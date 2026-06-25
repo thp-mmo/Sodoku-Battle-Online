@@ -16,6 +16,11 @@ namespace SudokuBattleOnline.Forms
         private Difficulty currentDifficulty = Difficulty.Medium;
         private ComboBox cmbDifficulty = null!;
 
+        private System.Windows.Forms.Timer gameTimer = null!;
+        private Label lblTimer = null!;
+        private int remainingSeconds;
+        private int totalLimitSeconds;
+
         private readonly SudokuGenerator sudokuGenerator = new();
 
         private int[,] currentPuzzle = new int[9, 9];
@@ -99,6 +104,19 @@ namespace SudokuBattleOnline.Forms
 
             CreateBoard();
 
+            // Khởi tạo Nhãn đếm ngược
+            lblTimer = new Label();
+            lblTimer.Text = "Còn lại: 00:00";
+            lblTimer.Font = new Font("Arial", 12, FontStyle.Bold);
+            lblTimer.Location = new Point(500, 370);
+            lblTimer.AutoSize = true;
+            Controls.Add(lblTimer);
+
+            // Khởi tạo Timer
+            gameTimer = new System.Windows.Forms.Timer();
+            gameTimer.Interval = 1000;
+            gameTimer.Tick += GameTimer_Tick;
+
             Button btnNew = new Button();
             btnNew.Text = "New";
             btnNew.Location = new Point(500, 100);
@@ -116,6 +134,8 @@ namespace SudokuBattleOnline.Forms
 
             btnCheck.Click += async (s, e) =>
             {
+                gameTimer.Stop(); // Tạm dừng đếm thời gian khi hiển thị thông báo kiểm tra
+
                 int emptyCells = 0;
                 int wrongCells = 0;
 
@@ -142,10 +162,13 @@ namespace SudokuBattleOnline.Forms
                 {
                     string msg = $"Bảng Sudoku chưa hoàn thành.\n- Ô trống: {emptyCells}\n- Ô sai: {wrongCells}";
                     MessageBox.Show(msg, "Kết quả kiểm tra", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    
+                    gameTimer.Start(); // Tiếp tục đếm thời gian
                     return; 
                 }
 
-                int timeSeconds = Math.Max(1, (int)(DateTime.Now - startedAt).TotalSeconds);
+                // Người chơi thắng cuộc
+                int timeSeconds = Math.Max(1, totalLimitSeconds - remainingSeconds);
                 int score = Math.Max(0, 1000 - timeSeconds * 2);
                 string result = "Win";
 
@@ -186,6 +209,7 @@ namespace SudokuBattleOnline.Forms
 
             btnSolve.Click += (s, e) =>
             {
+                gameTimer.Stop(); // Dừng bộ đếm thời gian khi giải tự động
                 if (currentSolution != null && currentSolution[0, 0] != 0)
                 {
                     for (int r = 0; r < 9; r++)
@@ -258,6 +282,13 @@ namespace SudokuBattleOnline.Forms
             currentSolution = generated.Solution;
 
             LoadPuzzleToBoard(currentPuzzle);
+
+            // Cấu hình bộ đếm thời gian
+            totalLimitSeconds = currentDifficulty.GetTimeLimitSeconds();
+            remainingSeconds = totalLimitSeconds;
+            lblTimer.Text = $"Còn lại: {remainingSeconds / 60:D2}:{remainingSeconds % 60:D2}";
+            lblTimer.ForeColor = Color.Black;
+            gameTimer.Start();
         }
         private void LoadPuzzleToBoard(int[,] puzzle)
         {
@@ -395,6 +426,70 @@ namespace SudokuBattleOnline.Forms
             }
 
             return count;
+        }
+
+        private void GameTimer_Tick(object? sender, EventArgs e)
+        {
+            if (remainingSeconds > 0)
+            {
+                remainingSeconds--;
+                int minutes = remainingSeconds / 60;
+                int seconds = remainingSeconds % 60;
+                lblTimer.Text = $"Còn lại: {minutes:D2}:{seconds:D2}";
+
+                if (remainingSeconds <= 60)
+                {
+                    lblTimer.ForeColor = Color.Red;
+                }
+                else
+                {
+                    lblTimer.ForeColor = Color.Black;
+                }
+            }
+            else
+            {
+                gameTimer.Stop();
+
+                // Khóa bảng
+                for (int r = 0; r < 9; r++)
+                {
+                    for (int c = 0; c < 9; c++)
+                    {
+                        cells[r, c].ReadOnly = true;
+                    }
+                }
+
+                MessageBox.Show("Hết giờ! Bạn đã thất bại trong việc giải bảng Sudoku.", "Kết thúc game", MessageBoxButtons.OK, MessageBoxIcon.Stop);
+
+                // Lưu kết quả thua lên Server
+                SaveMatchTimeout();
+            }
+        }
+
+        private async void SaveMatchTimeout()
+        {
+            try
+            {
+                var request = new SaveMatchResultPacket
+                {
+                    PacketType = "SAVE_MATCH_RESULT",
+                    Opponent = "Single Player",
+                    Result = "Lose",
+                    Difficulty = currentDifficulty.ToString(),
+                    Score = 0,
+                    TimeSeconds = totalLimitSeconds
+                };
+
+                SaveMatchResultPacket? response = await AppSession.SendAndWaitAsync<SaveMatchResultPacket>(request, "SAVE_MATCH_RESULT");
+                if (response != null && response.Success)
+                {
+                    Console.WriteLine("[DB LOG] Kết quả hết giờ đã được lưu.");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("[DB LOG ERROR] Không thể lưu kết quả hết giờ: " + ex.Message);
+            }
         }
     }
 }

@@ -1,4 +1,4 @@
-﻿
+
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.13.35825.156
@@ -8,8 +8,6 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Server", "Server\Server.csproj", "{61281972-4803-4F8B-8AB7-164FACCEFAD7}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Shared", "Shared\Shared.csproj", "{5113EAC5-FA33-4943-82AD-894C4A15A652}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AI", "AI\AI.csproj", "{3836EEDD-A0BF-43D1-BF8F-5B0FEBB91D81}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -29,10 +27,6 @@ Global
 		{5113EAC5-FA33-4943-82AD-894C4A15A652}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{5113EAC5-FA33-4943-82AD-894C4A15A652}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{5113EAC5-FA33-4943-82AD-894C4A15A652}.Release|Any CPU.Build.0 = Release|Any CPU
-		{3836EEDD-A0BF-43D1-BF8F-5B0FEBB91D81}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{3836EEDD-A0BF-43D1-BF8F-5B0FEBB91D81}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{3836EEDD-A0BF-43D1-BF8F-5B0FEBB91D81}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{3836EEDD-A0BF-43D1-BF8F-5B0FEBB91D81}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
