@@ -12,6 +12,12 @@ namespace Server.GameManager
 
         public GameState GameState { get; set; }
 
+        // Đề Sudoku ban đầu
+        public int[,] PuzzleBoard { get; set; }
+
+        // Đáp án chuẩn
+        public int[,] SolutionBoard { get; set; }
+
         public bool IsStarted { get; set; }
 
         public GameRoom()
