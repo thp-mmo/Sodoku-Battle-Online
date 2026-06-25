@@ -13,9 +13,9 @@
         public const int HARD_CLUES = 26;   // 55 ô ẩn – thách thức
 
         // Thời gian giới hạn (giây)
-        public const int EASY_TIME_LIMIT = 1200;   // 10 phút
-        public const int MEDIUM_TIME_LIMIT = 900;   //  8 phút
-        public const int HARD_TIME_LIMIT = 600;   //  6 phút
+        public const int EASY_TIME_LIMIT = 1200;   // 20 phút
+        public const int MEDIUM_TIME_LIMIT = 900;   // 15 phút
+        public const int HARD_TIME_LIMIT = 600;   //  10 phút
 
         // ELO điểm thưởng / phạt theo độ khó
         public const int EASY_ELO_WIN = 8;
