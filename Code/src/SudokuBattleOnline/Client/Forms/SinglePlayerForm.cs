@@ -20,7 +20,7 @@ namespace SudokuBattleOnline.Forms
         private Label lblTimer = null!;
         private int remainingSeconds;
         private int totalLimitSeconds;
-
+        private bool gameStarted = false;
         private readonly SudokuGenerator sudokuGenerator = new();
 
         private int[,] currentPuzzle = new int[9, 9];
@@ -99,7 +99,20 @@ namespace SudokuBattleOnline.Forms
             board = new Panel();
             board.Location = new Point(20, 70);
             board.Size = new Size(390, 390);
-            board.BorderStyle = BorderStyle.FixedSingle;
+            board.BorderStyle = BorderStyle.None;
+
+            board.Paint += (s, e) =>
+            {
+            using Pen pen = new Pen(Color.Black, 6);
+            e.Graphics.DrawRectangle(
+            pen,
+            0,
+            0,
+            board.Width - 1,
+            board.Height - 1
+            );
+            };
+
             Controls.Add(board);
 
             CreateBoard();
@@ -288,7 +301,8 @@ namespace SudokuBattleOnline.Forms
             remainingSeconds = totalLimitSeconds;
             lblTimer.Text = $"Còn lại: {remainingSeconds / 60:D2}:{remainingSeconds % 60:D2}";
             lblTimer.ForeColor = Color.Black;
-            gameTimer.Start();
+            gameStarted = false;
+            gameTimer.Stop();
         }
         private void LoadPuzzleToBoard(int[,] puzzle)
         {
@@ -337,13 +351,16 @@ namespace SudokuBattleOnline.Forms
                 {
                     TextBox txt = new TextBox();
 
+                    txt.BorderStyle = BorderStyle.FixedSingle;
                     txt.Font = new Font("Arial", 16, FontStyle.Bold);
                     txt.TextAlign = HorizontalAlignment.Center;
                     txt.MaxLength = 1;
 
-                    int x = c * size + (c / 3) * 4;
-                    int y = r * size + (r / 3) * 4;
+                    int boardRealSize = 368;
+                    int offset = 11;
 
+                    int x = offset + c * size + (c / 3) * 4;
+                    int y = offset + r * size + (r / 3) * 4;
                     txt.Location = new Point(x, y);
                     txt.Size = new Size(size, size);
 
@@ -371,7 +388,11 @@ namespace SudokuBattleOnline.Forms
                             txt.ForeColor = Color.Black;
                             return;
                         }
-
+                        if (!gameStarted)
+                        {
+                        gameStarted = true;
+                        gameTimer.Start();
+                        }
                         if (int.TryParse(txt.Text, out int value))
                         {
                             txt.ForeColor = Color.Blue; // User input should just be blue. The Check button handles correctness.
