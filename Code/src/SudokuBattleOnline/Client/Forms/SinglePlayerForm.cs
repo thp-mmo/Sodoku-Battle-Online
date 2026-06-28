@@ -386,16 +386,34 @@ namespace SudokuBattleOnline.Forms
                         if (string.IsNullOrEmpty(txt.Text))
                         {
                             txt.ForeColor = Color.Black;
+                            txt.BackColor = Color.White;
+                            // Tái kiểm tra các ô liên quan khi xóa
+                            RevalidateRelated(captureR, captureC);
                             return;
                         }
+
                         if (!gameStarted)
                         {
-                        gameStarted = true;
-                        gameTimer.Start();
+                            gameStarted = true;
+                            gameTimer.Start();
                         }
+
                         if (int.TryParse(txt.Text, out int value))
                         {
-                            txt.ForeColor = Color.Blue; // User input should just be blue. The Check button handles correctness.
+                            // Kiểm tra xung đột: trùng hàng / cột / ô 3x3
+                            bool conflict = HasConflict(captureR, captureC, value);
+                            if (conflict)
+                            {
+                                txt.ForeColor = Color.DarkRed;
+                                txt.BackColor = Color.FromArgb(255, 220, 220);
+                            }
+                            else
+                            {
+                                txt.ForeColor = Color.Black;
+                                txt.BackColor = Color.White;
+                            }
+                            // Tái kiểm tra các ô liên quan (vì thay đổi có thể giải xung đột)
+                            RevalidateRelated(captureR, captureC);
                         }
                     };
 
@@ -510,6 +528,73 @@ namespace SudokuBattleOnline.Forms
             catch (Exception ex)
             {
                 Console.WriteLine("[DB LOG ERROR] Không thể lưu kết quả hết giờ: " + ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Kiểm tra xem số <paramref name="value"/> có bị trùng lặp
+        /// trong cùng hàng, cột, hoặc ô 3×3 với ô (row, col) không.
+        /// Bỏ qua chính ô đó khi so sánh.
+        /// </summary>
+        private bool HasConflict(int row, int col, int value)
+        {
+            for (int i = 0; i < 9; i++)
+            {
+                // Cùng hàng (bỏ qua chính ô)
+                if (i != col && int.TryParse(cells[row, i].Text, out int rv) && rv == value)
+                    return true;
+
+                // Cùng cột (bỏ qua chính ô)
+                if (i != row && int.TryParse(cells[i, col].Text, out int cv) && cv == value)
+                    return true;
+            }
+
+            // Cùng ô 3×3
+            int startRow = row / 3 * 3;
+            int startCol = col / 3 * 3;
+            for (int r = startRow; r < startRow + 3; r++)
+            {
+                for (int c = startCol; c < startCol + 3; c++)
+                {
+                    if (r == row && c == col) continue;
+                    if (int.TryParse(cells[r, c].Text, out int bv) && bv == value)
+                        return true;
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Sau khi ô (row, col) thay đổi, tái kiểm tra màu của tất cả
+        /// các ô liên quan (cùng hàng, cột, ô 3×3) để cập nhật đúng.
+        /// </summary>
+        private void RevalidateRelated(int row, int col)
+        {
+            var toCheck = new System.Collections.Generic.HashSet<(int, int)>();
+
+            for (int i = 0; i < 9; i++)
+            {
+                toCheck.Add((row, i));   // Cùng hàng
+                toCheck.Add((i, col));   // Cùng cột
+            }
+
+            int startRow = row / 3 * 3;
+            int startCol = col / 3 * 3;
+            for (int r = startRow; r < startRow + 3; r++)
+                for (int c = startCol; c < startCol + 3; c++)
+                    toCheck.Add((r, c));
+
+            foreach (var (r, c) in toCheck)
+            {
+                if (r == row && c == col) continue;
+                var cell = cells[r, c];
+                if (cell.ReadOnly || string.IsNullOrEmpty(cell.Text)) continue;
+                if (!int.TryParse(cell.Text, out int v)) continue;
+
+                bool conflict = HasConflict(r, c, v);
+                cell.ForeColor = conflict ? Color.DarkRed : Color.Black;
+                cell.BackColor = conflict ? Color.FromArgb(255, 220, 220) : Color.White;
             }
         }
     }
